@@ -145,6 +145,7 @@ int
 main(void)
 {
   static char buf[100];
+  //fd means file descriptor
   int fd;
 
   // Ensure that three file descriptors are open.
