@@ -22,27 +22,32 @@ int main(int argc,char* argv[]){
     int ret = fork();
     if (ret == 0) { 
         /* 子进程 */
+        int pid_child = getpid();
         close(p1[0]);
-        write(p1[1],"pin",n);
+        write(p1[1],"pong",n);
         close(p1[1]);
 
         close(p2[1]); // 关闭写端
         read(p2[0],buf , n);
         close(p2[0]); // 读取完成，关闭读端
-        printf("%s",buf);
+        printf("%d:received %s\n",pid_child,buf);
+
         // exit(0);
     } else if (ret>0) { 
         /* 父进程 */
+        int pid_parent = getpid();
+        close(p2[0]); // 关闭读端
+        write(p2[1], "ping", n);
+        close(p2[1]); // 写入完成，关闭写端
+    
+        wait(0);
         close(p1[1]);
         read(p1[0],buf,n);
         close(p1[0]);
+        
+        printf("%d:received %s\n",pid_parent,buf);
 
-        // wait(0);
 
-        close(p2[0]); // 关闭读端
-        write(p2[1], "pon", n);
-        close(p2[1]); // 写入完成，关闭写端
-        printf("%s",buf);
     }
     exit(0);
 }
