@@ -1,16 +1,5 @@
 #include "kernel/types.h"
 #include "user.h"
-// 1) pingpong
-
-// a) 使用pipe()创建管道，详见实验原理；
-
-// b) 使用fork()创建子进程，注意根据返回值，判断父子进程；
-
-// c) 利用read(), write()函数对管道进行读写。
-
-// d) 请在user/pingpong.c中实现。
-
-// e) 修改Makefile，将程序添加到UPROGS。
 
 int main(int argc,char* argv[]){
     int p1[2];
@@ -30,7 +19,7 @@ int main(int argc,char* argv[]){
         close(p2[1]); // 关闭写端
         read(p2[0],buf , n);
         close(p2[0]); // 读取完成，关闭读端
-        printf("%d:received %s\n",pid_child,buf);
+        printf("%d: received %s\n",pid_child,buf);
 
         // exit(0);
     } else if (ret>0) { 
@@ -45,7 +34,7 @@ int main(int argc,char* argv[]){
         read(p1[0],buf,n);
         close(p1[0]);
         
-        printf("%d:received %s\n",pid_parent,buf);
+        printf("%d: received %s\n",pid_parent,buf);
 
 
     }
