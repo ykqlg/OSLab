@@ -47,7 +47,7 @@ find(char *path, char *file)
                 p[DIRSIZ] = 0;
                 if(stat(buf, &st) < 0)
                 {
-                    fprintf(2, "find: cannot stat %s\n", buf);
+                    fprintf(2, "find: stat failed %s\n", buf);
                     continue;
                 }
                 // 若是文件目录类型，进入递归
@@ -61,11 +61,16 @@ find(char *path, char *file)
                     printf("%s\n", buf);
                 } 
             }
+            break;
         case T_FILE:
             fprintf(2, "find: %s is not a directory\n", path);
             close(fd);
             return;
         case T_DEVICE:
+            fprintf(2, "find: %s is not a directory\n", path);
+            close(fd);
+            return;
+        default:
             fprintf(2, "find: %s is not a directory\n", path);
             close(fd);
             return;
@@ -78,7 +83,7 @@ main(int argc, char *argv[])
 {
     if (argc != 3)
     {
-        fprintf(2, "usage: find dirName fileName\n");
+        fprintf(2, "find's argc is wrong\n");
         exit(1);
     }
     find(argv[1], argv[2]);
