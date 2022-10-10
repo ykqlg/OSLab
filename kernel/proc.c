@@ -357,7 +357,6 @@ uint64 freefd(void){
     release(&p->lock);
 
   }
-
   return freefd_num;
 }
 
