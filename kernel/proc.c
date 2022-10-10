@@ -130,6 +130,21 @@ found:
   return p;
 }
 
+//Caculate the number of UNUSED proc. 
+uint64 nproc(void){
+  struct proc *p;
+  int nproc_num=0;
+  for(p = proc; p < &proc[NPROC]; p++) {
+    acquire(&p->lock);
+    if(p->state == UNUSED){
+      nproc_num++;
+    }
+    release(&p->lock);
+
+  }
+  return nproc_num;
+}
+
 // free a proc structure and the data hanging from it,
 // including user pages.
 // p->lock must be held.
@@ -273,6 +288,10 @@ fork(void)
     release(&np->lock);
     return -1;
   }
+
+  //add tht parent's mask
+  np->mask = p->mask;
+  
   np->sz = p->sz;
 
   np->parent = p;
@@ -324,6 +343,22 @@ reparent(struct proc *p)
       release(&pp->lock);
     }
   }
+}
+
+uint64 freefd(void){
+  struct proc *p = myproc();
+  int freefd_num=0;
+
+  for(int fd = 0; fd < NOFILE; fd++){
+    acquire(&p->lock);
+    if(!p->ofile[fd]){
+      freefd_num++;
+    }
+    release(&p->lock);
+
+  }
+
+  return freefd_num;
 }
 
 // Exit the current process.  Does not return.
