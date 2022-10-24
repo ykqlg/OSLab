@@ -174,7 +174,6 @@ syscall(void)
       int pid = p->pid;
       char *syscall_name = syscalls_name[num];
       uint64 return_value = p->trapframe->a0;
-      //未完成中间那个arg0
       printf("%d: %s(%d) -> %d\n",pid,syscall_name, arg0 , return_value);
 
     }
