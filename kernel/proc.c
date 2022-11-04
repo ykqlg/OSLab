@@ -128,13 +128,14 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  // An empty kernel page table.
   p->k_pagetable = proc_kpagetable();
   if(p->k_pagetable == 0){
     freeproc(p);
     release(&p->lock);
     return 0;
   }
-
+  
   if(mappages(p->k_pagetable, p->kstack, PGSIZE, p->kstack_pa, PTE_R | PTE_W) != 0)
   		panic("proc_cpykm");
 
