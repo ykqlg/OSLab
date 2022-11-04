@@ -37,6 +37,7 @@ procinit(void)
       char *pa = kalloc();
       if(pa == 0)
         panic("kalloc");
+      p->kstack_pa = (uint64)pa;
       uint64 va = KSTACK((int) (p - proc));
       kvmmap(va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
       p->kstack = va;
@@ -127,7 +128,53 @@ found:
   p->context.ra = (uint64)forkret;
   p->context.sp = p->kstack + PGSIZE;
 
+  p->k_pagetable = proc_kpagetable();
+  if(p->k_pagetable == 0){
+    freeproc(p);
+    release(&p->lock);
+    return 0;
+  }
+
+  if(mappages(p->k_pagetable, p->kstack, PGSIZE, p->kstack_pa, PTE_R | PTE_W) != 0)
+  		panic("proc_cpykm");
+
+  // kvmmap((uint64)p->k_pagetable, p->kstack_pa, PGSIZE, PTE_R | PTE_W);
+
   return p;
+}
+
+void
+u2kpagemap(){
+  
+}
+
+void
+freeprocwalk(pagetable_t kpgtbl){
+  uint64 pa;
+  // 遍历L2
+  for(int i2 = 0; i2 < 512; i2++) {
+    pte_t *pte2 = &kpgtbl[i2];
+    if(*pte2 & PTE_V){
+      pa = PTE2PA(*pte2);
+      pagetable_t kpgtbl1 = (pagetable_t)pa;
+
+      // 遍历L1
+      for(int i1 = 0; i1 < 512; i1++) {
+        pte_t *pte1 = &kpgtbl1[i1];
+        if(*pte1 & PTE_V){
+          pa = PTE2PA(*pte1);
+          pagetable_t kpgtbl0 = (pagetable_t)pa;
+          //释放L0
+          kfree((void*)kpgtbl0);
+          //L1中的该项置0
+          kpgtbl1[i1] = 0;
+        }
+      }
+      kfree((void*)kpgtbl1);
+      kpgtbl[i2] = 0;
+    }
+  }
+  kfree((void*)kpgtbl);
 }
 
 // free a proc structure and the data hanging from it,
@@ -142,6 +189,11 @@ freeproc(struct proc *p)
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
   p->pagetable = 0;
+
+  if(p->k_pagetable)
+    freeprocwalk(p->k_pagetable);
+  p->k_pagetable = 0;
+
   p->sz = 0;
   p->pid = 0;
   p->parent = 0;
@@ -151,6 +203,7 @@ freeproc(struct proc *p)
   p->xstate = 0;
   p->state = UNUSED;
 }
+
 
 // Create a user page table for a given process,
 // with no user memory, but with trampoline pages.
@@ -473,7 +526,15 @@ scheduler(void)
         // before jumping back to us.
         p->state = RUNNING;
         c->proc = p;
+        
+        //加载进程内核页表
+        w_satp(MAKE_SATP(p->k_pagetable));
+        sfence_vma();
+        
         swtch(&c->context, &p->context);
+
+        //无进程运行，载入全局内核页表
+        kvminithart();
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.

@@ -47,6 +47,32 @@ kvminit()
   kvmmap(TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 }
 
+pagetable_t
+proc_kpagetable(){
+  pagetable_t k_pagetable = (pagetable_t) kalloc();
+  memset(k_pagetable, 0, PGSIZE);
+
+  if(mappages(k_pagetable,UART0,PGSIZE,UART0,PTE_R | PTE_W)!=0)
+    panic("proc_uart");
+
+  if(mappages(k_pagetable,VIRTIO0,PGSIZE,VIRTIO0,PTE_R | PTE_W)!=0)
+    panic("proc_virtio");
+
+  if(mappages(k_pagetable,PLIC,0x400000,PLIC,PTE_R | PTE_W)!=0)
+    panic("proc_plic");
+
+  if(mappages(k_pagetable,KERNBASE,(uint64)etext-KERNBASE,KERNBASE,PTE_R | PTE_X)!=0)
+    panic("proc_kernbase");
+
+  if(mappages(k_pagetable,(uint64)etext,PHYSTOP-(uint64)etext,(uint64)etext,PTE_R | PTE_W)!=0)
+    panic("proc_etext");
+
+  if(mappages(k_pagetable,TRAMPOLINE,PGSIZE,(uint64)trampoline,PTE_R | PTE_X)!=0)
+    panic("proc_trampoline");
+
+  return k_pagetable;
+}
+
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 void
@@ -397,6 +423,8 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
     srcva = va0 + PGSIZE;
   }
   return 0;
+  // w_sstatus(r_sstatus() | SSTATUS_SUM);
+  // return copyin_new(pagetable, dst, srcva, len);
 }
 
 // Copy a null-terminated string from user to kernel.
@@ -440,6 +468,8 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+
+  // return copyinstr_new(pagetable, dst, srcva, max);
 }
 
 // check if use global kpgtbl or not 
@@ -449,4 +479,38 @@ test_pagetable()
   uint64 satp = r_satp();
   uint64 gsatp = MAKE_SATP(kernel_pagetable);
   return satp != gsatp;
+}
+
+void
+vmprint(pagetable_t pgtbl){
+  uint64 pa;
+  printf("page table %p\n",pgtbl);
+  //L2
+  for(int i2 = 0; i2 < 512; i2++){
+    pte_t *pte2 = &pgtbl[i2];
+    if(*pte2 & PTE_V) {
+      pa = PTE2PA(*pte2);
+      printf("||%d: pte %p pa %p\n",i2,*pte2,pa);
+      pagetable_t pgtbl1 = (pagetable_t) pa;
+      
+      //L1
+      for(int i1 = 0; i1 < 512; i1++){
+        pte_t *pte1 = &pgtbl1[i1];
+        if(*pte1 & PTE_V) {
+          pa = PTE2PA(*pte1);
+          printf("|| ||%d: pte %p pa %p\n",i1,*pte1,pa);
+          pagetable_t pgtbl0 = (pagetable_t) pa;
+
+          //L0
+          for(int i0 = 0; i0 < 512; i0++){
+            pte_t *pte0 = &pgtbl0[i0];
+            if(*pte0 & PTE_V) {
+              pa = PTE2PA(*pte0);
+              printf("|| || ||%d: pte %p pa %p\n",i0,*pte0,pa);
+            }
+          }
+        }
+      }
+    } 
+  }
 }
