@@ -144,10 +144,6 @@ found:
   return p;
 }
 
-void
-u2kpagemap(){
-  
-}
 
 void
 freeprocwalk(pagetable_t kpgtbl){
@@ -278,6 +274,9 @@ userinit(void)
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter
   p->trapframe->sp = PGSIZE;  // user stack pointer
+  
+  u2kpagemap(p->pagetable,p->k_pagetable,0,p->sz);
+    
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -292,10 +291,11 @@ userinit(void)
 int
 growproc(int n)
 {
-  uint sz;
+  uint sz,oldsz;
   struct proc *p = myproc();
 
   sz = p->sz;
+  oldsz = p->sz;
   if(n > 0){
     if((sz = uvmalloc(p->pagetable, sz, sz + n)) == 0) {
       return -1;
@@ -304,6 +304,11 @@ growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  
+  if(u2kpagemap(p->pagetable,p->k_pagetable,oldsz, p->sz)<0){
+    return -1;
+  }
+
   return 0;
 }
 
@@ -349,6 +354,7 @@ fork(void)
 
   np->state = RUNNABLE;
 
+  u2kpagemap(np->pagetable,np->k_pagetable,0,np->sz);
   release(&np->lock);
 
   return pid;

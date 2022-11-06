@@ -181,6 +181,8 @@ int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 int             test_pagetable();
 void            vmprint(pagetable_t pgtbl); 
+int             u2kpagemap(pagetable_t upage,pagetable_t kpage, uint64 oldsz,uint64 newsz);  
+
 
 //vmcopyin.c
 int             copyin_new(pagetable_t, char *, uint64, uint64);
