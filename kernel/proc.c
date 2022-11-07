@@ -354,7 +354,11 @@ fork(void)
 
   np->state = RUNNABLE;
 
-  u2kpagemap(np->pagetable,np->k_pagetable,0,np->sz);
+  if(u2kpagemap(np->pagetable,np->k_pagetable,0,np->sz)<0){
+    freeproc(np);
+    release(&np->lock);
+    return -1; 
+  }
   release(&np->lock);
 
   return pid;

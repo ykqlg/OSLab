@@ -515,7 +515,6 @@ vmprint(pagetable_t pgtbl){
   }
 }
 
-//默认用户地址空间在PLIC以下（虚拟地址），直接用这个va进行映射到内核页表
 int u2kpagemap(pagetable_t upage, pagetable_t kpage, uint64 oldsz, uint64 newsz) 
 {
   uint64 a;
